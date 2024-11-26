@@ -50,6 +50,9 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT: 
                 return
+        if kk_rct.colliderect(bb_rct):
+            print("ゲームオーバー")
+            return#ゲームオーバー
         screen.blit(bg_img, [0, 0]) 
 
         key_lst = pg.key.get_pressed()
@@ -67,10 +70,10 @@ def main():
         yoko,tate = check_bound(bb_rct)
         if not yoko:
             vx *= -1
-            vx +=100
+            clock.tick +=1
         if not tate:
             vy *= -1
-            vy += 100
+            clock.tick +=1
         screen.blit(bb_img, bb_rct)
 
         pg.display.update()
