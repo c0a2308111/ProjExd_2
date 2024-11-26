@@ -3,6 +3,7 @@ import random
 import sys
 import pygame as pg
 
+
 WIDTH, HEIGHT = 1100, 650
 DELTA = {
     pg.K_UP: (0, -5),
@@ -28,31 +29,43 @@ def check_bound(rct: pg.Rect) -> tuple[bool, bool]:
     return yoko, tate
 
 
-def game_over(screen: pg.Surface) -> None:
+def game_over(screen):
+    # フォント設定
+    font = pg.font.Font(None, 80)
+    text = font.render("GAME OVER", True, (255, 255, 255))
+    # 泣いているこうかとん画像（8.png）を読み込む
+    crying_kk_img = pg.transform.rotozoom(pg.image.load("fig/8.png"), 0, 1.5)
+    # 左右にこうかとんを表示する座標
+    left_pos = (WIDTH // 4 - crying_kk_img.get_width() // 2, HEIGHT // 2 - crying_kk_img.get_height() // 2)
+    right_pos = (3 * WIDTH // 4 - crying_kk_img.get_width() // 2, HEIGHT // 2 - crying_kk_img.get_height() // 2)
+    # ブラックアウトのための半透明Surface
+    blackout = pg.Surface((WIDTH, HEIGHT))
+    blackout.fill((0, 0, 0))
+    blackout.set_alpha(210)
+    # 半透明の黒い四角を画面に描画（ブラックアウト）
+    screen.blit(blackout, (0, 0))
+    # ブラックアウト後にこうかとんとテキストを描画
+    screen.blit(crying_kk_img, left_pos)
+    screen.blit(crying_kk_img, right_pos)
+    screen.blit(text, (WIDTH // 2 - 150, HEIGHT // 2 - 40))
+
+    pg.display.update()  # 画面を更新
+
+    # 3秒待機
+    pg.time.wait(3000)
+
+
+
+
+def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
     """
-    ゲームオーバー時に画面に「Game Over」を表示し、泣いているこうかとんを描画する。
-    引数：screen - 描画するスクリーンSurface
+    サイズの異なる爆弾Surfaceを要素としたリストと加速度リストを返す。
     """
-    # 半透明の黒い背景
-    overlay = pg.Surface((WIDTH, HEIGHT), pg.SRCALPHA)
-    overlay.fill((0, 0, 0, 150))
-    screen.blit(overlay, (0, 0))
-    
-    # "Game Over" テキストの描画
-    font = pg.font.Font(None, 120)
-    text = font.render("Game Over", True, (255, 255, 255))  # 白色のテキスト
-    text_rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-    screen.blit(text, text_rect)
-    
-    # 左右のこうかとん画像を描画
-    kk_cry_img = pg.transform.rotozoom(pg.image.load("fig/9.png"), 0, 2.0)  # 泣いているこうかとん画像
-    left_kk_rect = kk_cry_img.get_rect(center=(text_rect.left - 60, HEIGHT // 2))  # 左側
-    right_kk_rect = kk_cry_img.get_rect(center=(text_rect.right + 60, HEIGHT // 2))  # 右側
-    screen.blit(kk_cry_img, left_kk_rect)
-    screen.blit(kk_cry_img, right_kk_rect)
-    
-    pg.display.update()
-    pg.time.wait(3000)  # 3秒間停止
+    bb_imgs = [pg.Surface((size, size), pg.SRCALPHA) for size in range(10, 110, 10)]
+    for i, img in enumerate(bb_imgs):
+        pg.draw.circle(img, (255, 0, 0), (img.get_width() // 2, img.get_height() // 2), img.get_width() // 2)
+    bb_accs = [i for i in range(1, 11)]
+    return bb_imgs, bb_accs
 
 
 def main():
@@ -62,45 +75,54 @@ def main():
     kk_img = pg.transform.rotozoom(pg.image.load("fig/3.png"), 0, 0.9)
     kk_rct = kk_img.get_rect()
     kk_rct.center = 300, 200
-    bb_img = pg.Surface((20, 20))  # 爆弾用空surface
-    pg.draw.circle(bb_img, (255, 0, 0), (10, 10), 10)  # 爆弾円を描く
-    bb_img.set_colorkey((0, 0, 0))  # 爆弾周りの黒いのを消す
-    bb_rct = bb_img.get_rect()  # 爆弾のrect抽出
+
+    bb_imgs, bb_accs = init_bb_imgs()
+    bb_img = bb_imgs[0]
+    bb_rct = bb_img.get_rect()
     bb_rct.centerx = random.randint(0, WIDTH)
     bb_rct.centery = random.randint(0, HEIGHT)
-    vx, vy = +5, +5  # 爆弾速度ベクトル
+    vx, vy = +10, +10 # 爆弾速度ベクトル
+
     clock = pg.time.Clock()
     tmr = 0
 
     while True:
         for event in pg.event.get():
-            if event.type == pg.QUIT:
+            if event.type == pg.QUIT: 
                 return
-
+        
         if kk_rct.colliderect(bb_rct):
             game_over(screen)  # ゲームオーバー画面を表示
-            return  # ゲームオーバー
+            return
 
-        screen.blit(bg_img, [0, 0])
+        screen.blit(bg_img, [0, 0]) 
 
+        # こうかとんの移動処理
         key_lst = pg.key.get_pressed()
         sum_mv = [0, 0]
         for key, tpl in DELTA.items():
             if key_lst[key]:
                 sum_mv[0] += tpl[0]
                 sum_mv[1] += tpl[1]
-
         kk_rct.move_ip(sum_mv)
         if check_bound(kk_rct) != (True, True):
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
         screen.blit(kk_img, kk_rct)
 
+        # 爆弾の移動処理
         bb_rct.move_ip(vx, vy)
         yoko, tate = check_bound(bb_rct)
         if not yoko:
             vx *= -1
         if not tate:
             vy *= -1
+        
+        # 爆弾のサイズと速度の上昇
+        bb_img = bb_imgs[min(tmr // 250, 9)]  # サイズは最大で9番目まで
+        bb_rct = bb_img.get_rect(center=bb_rct.center)
+        vx = bb_accs[min(tmr // 250, 9)] * (1 if vx > 0 else -1)
+        vy = bb_accs[min(tmr // 250, 9)] * (1 if vy > 0 else -1)
+
         screen.blit(bb_img, bb_rct)
 
         pg.display.update()
