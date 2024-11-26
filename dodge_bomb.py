@@ -55,8 +55,6 @@ def game_over(screen):
     pg.time.wait(3000)
 
 
-
-
 def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
     """
     サイズの異なる爆弾Surfaceを要素としたリストと加速度リストを返す。
@@ -104,10 +102,28 @@ def main():
             if key_lst[key]:
                 sum_mv[0] += tpl[0]
                 sum_mv[1] += tpl[1]
+
+        # 進行方向に応じてこうかとんの画像を回転または反転
+        if sum_mv[0] != 0 or sum_mv[1] != 0:
+            if sum_mv[0] > 0:  # 右方向に進むときは反転
+                kk_img_rot = pg.transform.flip(kk_img, True, False)
+            elif sum_mv[0] < 0:  # 左方向に進むとき
+                kk_img_rot = kk_img  # 反転せずにそのまま
+            elif sum_mv[1] > 0:  # 下方向に進むとき
+                kk_img_rot = pg.transform.rotozoom(kk_img, 90, 1)
+            else:  # 上方向に進むとき
+                kk_img_rot = pg.transform.rotozoom(kk_img, -90, 1)
+        else:
+            kk_img_rot = kk_img  # 動かないときは元の画像を使用
+
+        kk_rct = kk_img_rot.get_rect(center=kk_rct.center)  # 画像の位置を更新
+
+        # こうかとんの移動処理
         kk_rct.move_ip(sum_mv)
         if check_bound(kk_rct) != (True, True):
             kk_rct.move_ip(-sum_mv[0], -sum_mv[1])
-        screen.blit(kk_img, kk_rct)
+        
+        screen.blit(kk_img_rot, kk_rct)
 
         # 爆弾の移動処理
         bb_rct.move_ip(vx, vy)
