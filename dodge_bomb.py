@@ -72,21 +72,24 @@ def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
     return bb_imgs, bb_accs
 
 
-def calc_following_velocity(org: pg.Rect, dst: pg.Rect) -> tuple[float, float]:
+def calc_following_velocity(org: pg.Rect, dst: pg.Rect, bb_size: int) -> tuple[float, float]:
     """
     爆弾がこうかとんを追いかけるための速度ベクトルを計算
     引数：org - こうかとんの位置Rect
           dst - 爆弾の位置Rect
+          bb_size - 爆弾のサイズ
     戻り値：(vx, vy) - 追従するための移動速度ベクトル
     """
     dx = dst.centerx - org.centerx  # x方向の差を計算
     dy = dst.centery - org.centery  # y方向の差を計算
     norm = math.sqrt(dx**2 + dy**2)  # 距離（ノルム）を計算
     if norm != 0:
-        vx = dx / norm * 3  # 速度ベクトルのx成分（3は速度の係数）
-        vy = dy / norm * 3  # 速度ベクトルのy成分
+        speed_factor = bb_size / 50  # サイズに基づいて速度を変更（例: サイズが大きいほど速く）
+        vx = dx / norm * 3 * speed_factor  # 速度ベクトルのx成分
+        vy = dy / norm * 3 * speed_factor  # 速度ベクトルのy成分
     else:
-        vx, vy = 0, 0  # 追従する必要がない場合（距離が0）
+        # normがゼロの場合はランダムに動かす（適宜調整）
+        vx, vy = random.choice([(-5, -5), (5, 5), (5, -5), (-5, 5)])
     return vx, vy
 
 
@@ -156,7 +159,7 @@ def main():
         screen.blit(kk_img_rot, kk_rct)
 
         # 爆弾の追従処理
-        bb_vx, bb_vy = calc_following_velocity(bb_rct, kk_rct)  # 追従するための速度を計算
+        bb_vx, bb_vy = calc_following_velocity(bb_rct, kk_rct, bb_rct.width)  # サイズを考慮して速度を計算
         bb_rct.move_ip(bb_vx, bb_vy)  # 爆弾を移動
 
         # 画面外に出ないように反転処理
@@ -176,6 +179,7 @@ def main():
         pg.display.update()  # 画面を更新
         tmr += 1  # タイマーを進める
         clock.tick(50)  # 1秒間に50回ループ
+
 
 
 if __name__ == "__main__":
