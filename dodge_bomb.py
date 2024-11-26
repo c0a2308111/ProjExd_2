@@ -2,6 +2,7 @@ import os
 import random
 import sys
 import pygame as pg
+import math
 
 
 WIDTH, HEIGHT = 1100, 650
@@ -66,6 +67,24 @@ def init_bb_imgs() -> tuple[list[pg.Surface], list[int]]:
     return bb_imgs, bb_accs
 
 
+def calc_following_velocity(org: pg.Rect, dst: pg.Rect) -> tuple[float, float]:
+    """
+    爆弾がこうかとんを追いかけるための速度ベクトルを計算します。
+    引数: org - こうかとんの位置Rect
+          dst - 爆弾の位置Rect
+    戻り値: (vx, vy) - 追従するための移動速度ベクトル
+    """
+    dx = dst.centerx - org.centerx
+    dy = dst.centery - org.centery
+    norm = math.sqrt(dx**2 + dy**2)  # ノルム（距離）
+    if norm != 0:
+        vx = dx / norm * 3  # 速度調整（3は速度の係数）
+        vy = dy / norm * 3
+    else:
+        vx, vy = 0, 0
+    return vx, vy
+
+
 def main():
     pg.display.set_caption("逃げろ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -92,7 +111,7 @@ def main():
         if kk_rct.colliderect(bb_rct):
             game_over(screen)  # ゲームオーバー画面を表示
             return
-
+        
         screen.blit(bg_img, [0, 0]) 
 
         # こうかとんの移動処理
@@ -125,19 +144,19 @@ def main():
         
         screen.blit(kk_img_rot, kk_rct)
 
-        # 爆弾の移動処理
-        bb_rct.move_ip(vx, vy)
+        # 爆弾の追従処理
+        bb_vx, bb_vy = calc_following_velocity(bb_rct, kk_rct)
+        bb_rct.move_ip(bb_vx, bb_vy)
+
         yoko, tate = check_bound(bb_rct)
         if not yoko:
-            vx *= -1
+            bb_vx *= -1
         if not tate:
-            vy *= -1
+            bb_vy *= -1
         
         # 爆弾のサイズと速度の上昇
         bb_img = bb_imgs[min(tmr // 250, 9)]  # サイズは最大で9番目まで
         bb_rct = bb_img.get_rect(center=bb_rct.center)
-        vx = bb_accs[min(tmr // 250, 9)] * (1 if vx > 0 else -1)
-        vy = bb_accs[min(tmr // 250, 9)] * (1 if vy > 0 else -1)
 
         screen.blit(bb_img, bb_rct)
 
